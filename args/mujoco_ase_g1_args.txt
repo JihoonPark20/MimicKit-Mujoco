@@ -1,0 +1,7 @@
+--engine_config data/engines/mujoco_engine.yaml
+--env_config data/envs/ase_g1_env.yaml
+--agent_config data/agents/ase_g1_agent.yaml
+--num_envs 64
+--devices cpu
+--visualize false
+--out_dir output/ase_g1

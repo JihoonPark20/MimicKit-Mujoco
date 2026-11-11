@@ -1,0 +1,7 @@
+--engine_config data/engines/mujoco_engine.yaml
+--env_config data/envs/deepmimic_g1_env.yaml
+--agent_config data/agents/deepmimic_g1_awr_agent.yaml
+--num_envs 64
+--devices cpu
+--visualize false
+--out_dir output/awr_g1

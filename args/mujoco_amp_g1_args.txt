@@ -1,0 +1,7 @@
+--engine_config data/engines/mujoco_engine.yaml
+--env_config data/envs/amp_g1_env.yaml
+--agent_config data/agents/amp_g1_agent.yaml
+--num_envs 64
+--devices cpu
+--visualize false
+--out_dir output/amp_g1

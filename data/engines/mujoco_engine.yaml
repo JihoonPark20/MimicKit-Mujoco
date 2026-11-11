@@ -1,0 +1,6 @@
+engine_name: mujoco
+control_mode: pos
+control_freq: 30
+sim_freq: 240
+num_threads: 4
+iterations: 50
