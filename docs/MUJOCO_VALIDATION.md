@@ -1,6 +1,6 @@
 # G1 MuJoCo validation
 
-Functional validation uses the official G1 model and sample motions. The latest checks passed on **2026-11-11**, with macOS Apple Silicon, Python **3.12.4**, PyTorch **2.15.0** and MuJoCo **3.17.0**. Resolved dependencies are recorded in [uv.lock](../uv.lock).
+Functional validation uses the official G1 model and sample motions. The latest checks passed on **2026-11-12**, with macOS Apple Silicon, Python **3.12.4**, PyTorch **2.15.0** and MuJoCo **3.17.0**. Resolved dependencies are recorded in [uv.lock](../uv.lock).
 
 ## Run the checks
 
@@ -24,10 +24,23 @@ The unit tests cover:
 - Actuator limits, control modes and invalid-action handling.
 - State consistency across stepping and resets, retained observation values, and engine lifecycle.
 - Reference-motion playback and device selection.
+- Demo contact rules, checkpoint preset handling and matching SMP priors.
 
 The integration script trains a small G1 prior, runs two actual updates for **DeepMimic/PPO, AWR, AMP, ASE, LCP, ADD and SMP**, reloads every saved policy, and plays reference motion. It checks that model weights change between updates and that checkpoints contain finite values.
 
-The latest validation completed **15 unit tests and 32 integration commands** across the supported Mac execution paths. Smoke runs use four environments, small networks and short episodes. Native viewer execution and official asset checksum verification have also been checked.
+The current unit suite passes **23 tests**. The demo integration coverage is described below. Smoke runs use four environments, small networks and short episodes. Native viewer execution and official asset checksum verification have also been checked.
+
+## Motion demo checks
+
+The [G1 demos](G1_DEMOS.md) cover `spinkick`, `kick_combo` and `cartwheel` with all seven algorithms. On **2026-11-12**, all **96 integration commands** passed across the supported Mac CPU and MPS execution paths: for each device, three 300-step reference runs, three matching SMP prior runs, and training/reload/playback for 21 motion/algorithm combinations.
+
+Every policy completed two small updates with changed, finite model weights. Saved motion names and contact settings matched the selected preset, and playback restored those settings from the checkpoint. Unit tests also confirm that the cartwheel preset permits wrist contact while retaining head-contact termination.
+
+```bash
+python tools/verify_demos.py --device cpu --out-dir output/verify_demos
+```
+
+Use `--device mps` on a compatible Mac. Select a subset with `--demos cartwheel --algorithms amp smp`. These runs establish execution; the policies and priors used for verification are not converged skill demonstrations.
 
 ## Validation scope
 

@@ -4,7 +4,7 @@
 
 - [MimicKit](https://github.com/xbpeng/MimicKit), commit `fbe1a36e878f036d6bf5521defb8eb3b8ab4170d`: learning methods, kinematics, motion formats, tools and original configurations. Its [Apache-2.0 license](../LICENSE) and [citation](../CITATION.cff) are retained.
 - [legged-gym-mujoco](https://github.com/JihoonPark20/legged-gym-mujoco): the CPU batch simulation framework, including native MuJoCo state handling, actuator-based PD control, contact sensors and viewer lifecycle. Its [BSD license](../licenses/legged-gym-mujoco-BSD-3-Clause.txt) and third-party notices are retained.
-- Official MimicKit data bundle: the G1 model, meshes and sample motions. Extracted files are recorded in [official_g1_manifest.json](../data/official_g1_manifest.json). The [Unitree license](../data/assets/g1/LICENSE.txt) and [bundle license](../data/LICENSE) are included.
+- Official MimicKit data bundle: the G1 model, meshes and sample motions. Extracted files are recorded in [official_g1_manifest.json](../data/official_g1_manifest.json). The [Unitree license](../licenses/unitree-g1-BSD-3-Clause.txt) and [bundle license](../data/LICENSE) are included.
 
 The MuJoCo backend is in [mujoco_engine.py](../mimickit/engines/mujoco_engine.py). The [convenience CLI](../mimickit_mujoco/cli.py) provides G1 training, prior training, playback and data installation.
 

@@ -11,6 +11,7 @@ import torch
 import yaml
 
 from . import ROOT, bootstrap
+from .demos import DEMOS, apply_demo, read_demo, validate_demo_prior
 
 ALGORITHMS = {
     "deepmimic": ("deepmimic", "deepmimic_g1_ppo"),
@@ -69,7 +70,9 @@ def smoke_config(config):
 
 def parser():
     p = argparse.ArgumentParser(description="MimicKit + native MuJoCo for Unitree G1 (29 DoF)")
-    p.add_argument("command", choices=("train", "play", "view-motion", "train-prior", "fetch-data", "doctor"))
+    p.add_argument(
+        "command", choices=("train", "play", "view-motion", "train-prior", "list-demos", "fetch-data", "doctor")
+    )
     p.add_argument("--algorithm", choices=ALGORITHMS, default="deepmimic")
     p.add_argument(
         "--device",
@@ -81,7 +84,9 @@ def parser():
     p.add_argument("--iterations", type=int, default=None)
     p.add_argument("--steps", type=int, default=600, help="Playback or motion-view steps")
     p.add_argument("--seed", type=int, default=0)
-    p.add_argument("--motion", type=Path, help="MimicKit motion .pkl or dataset .yaml")
+    motion = p.add_mutually_exclusive_group()
+    motion.add_argument("--motion", type=Path, help="MimicKit motion .pkl or dataset .yaml")
+    motion.add_argument("--demo", choices=DEMOS, help="Official G1 motion and contact preset")
     p.add_argument("--archive", type=Path, help="Local official ZIP for fetch-data")
     p.add_argument("--checkpoint", type=Path, help="Policy weights; play also restores adjacent saved configs")
     p.add_argument("--out-dir", type=Path)
@@ -95,6 +100,8 @@ def parser():
 
 def main(argv=None):
     args = parser().parse_args(argv)
+    if args.demo and (args.command not in ("train", "view-motion", "train-prior") or args.checkpoint):
+        raise SystemExit("--demo is for new train, train-prior or view-motion runs; checkpoints restore saved presets.")
     for key in ("motion", "checkpoint", "out_dir", "prior_dir", "archive"):
         val = getattr(args, key)
         if val is not None:
@@ -103,6 +110,13 @@ def main(argv=None):
         raise SystemExit("Run from a source checkout installed with pip install -e . (data/ is required).")
     os.chdir(ROOT)
     bootstrap()
+    if args.command == "list-demos":
+        for name in DEMOS:
+            preset = read_demo(name)
+            print(f"{name:12} {preset['description']:18} {preset['motion_file']}")
+        print("Algorithms: " + ", ".join(ALGORITHMS))
+        print("SMP requires a matching train-prior --demo NAME run. No pretrained policies are bundled.")
+        return
     if args.command == "fetch-data":
         from .data import fetch_data
 
@@ -161,6 +175,10 @@ def main(argv=None):
         env_cfg = read_yaml("data/envs/view_motion_g1_env.yaml")
     if args.motion is not None:
         env_cfg["motion_file"] = str(args.motion)
+        # A custom-motion override is no longer the saved named demo.
+        env_cfg.pop("demo_name", None)
+    if args.demo:
+        env_cfg = apply_demo(env_cfg, args.demo)
     if args.prior_dir is not None:
         agent_cfg["smp_prior_cfg"] = str(args.prior_dir / "diffusion_config.yaml")
         agent_cfg["smp_prior_model"] = str(args.prior_dir / "model.pt")
@@ -171,15 +189,23 @@ def main(argv=None):
     if not Path(env_cfg["char_file"]).exists() or not Path(env_cfg["motion_file"]).exists():
         raise SystemExit("Missing official G1 assets. Run: python -m mimickit_mujoco fetch-data")
     if args.command != "view-motion" and agent_cfg["agent_name"] == "SMP":
-        if not Path(agent_cfg["smp_prior_model"]).exists():
-            raise SystemExit("Train a G1 prior first: python -m mimickit_mujoco train-prior; then use --prior-dir")
+        if not all(Path(agent_cfg[key]).is_file() for key in ("smp_prior_model", "smp_prior_cfg")):
+            suffix = f" --demo {env_cfg['demo_name']}" if env_cfg.get("demo_name") else ""
+            raise SystemExit(
+                f"Train a G1 prior first: python -m mimickit_mujoco train-prior{suffix}; then use --prior-dir"
+            )
+        try:
+            validate_demo_prior(env_cfg, read_yaml(agent_cfg["smp_prior_cfg"]))
+        except ValueError as error:
+            raise SystemExit(str(error)) from error
     visualize = (args.visualize or args.command in ("play", "view-motion")) and not args.headless
     if visualize and sys.platform == "darwin" and not os.environ.get("MJPYTHON_BIN"):
         # The native viewer itself gives the definitive mjpython check. Keep
         # imports headless until this point so CPU training needs no display.
         print("macOS native viewer: launch this command with .venv/bin/mjpython")
     n = args.num_envs or (4 if args.smoke else 64 if args.command == "train" else 1)
-    out_dir = args.out_dir or ROOT / "output" / f"{args.algorithm}_g1_{time.strftime('%Y%m%d_%H%M%S')}"
+    run_name = f"{args.algorithm}_g1" + (f"_{args.demo}" if args.demo else "")
+    out_dir = args.out_dir or ROOT / "output" / f"{run_name}_{time.strftime('%Y%m%d_%H%M%S')}"
     if args.command == "train":
         if (out_dir / "model.pt").exists():
             raise SystemExit("Output already contains model.pt; select a new --out-dir to preserve it")
@@ -220,6 +246,7 @@ def main(argv=None):
                     iterations=iterations,
                     upstream="fbe1a36e878f036d6bf5521defb8eb3b8ab4170d",
                     initial_weights=str(args.checkpoint) if args.checkpoint else None,
+                    demo=env_cfg.get("demo_name"),
                 )
                 (out_dir / "run_config.json").write_text(json.dumps(metadata, indent=2) + "\n")
                 agent.train_model(iterations * n * agent_cfg["steps_per_iter"], str(out_dir), True, args.logger)

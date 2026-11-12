@@ -1,0 +1,13 @@
+name: cartwheel
+description: Cartwheel
+motion_file: data/motions/g1/g1_cartwheel.pkl
+# Matches the cartwheel contact list documented in upstream G1 environments.
+extra_contact_bodies:
+- left_elbow_link
+- left_wrist_roll_link
+- left_wrist_pitch_link
+- left_wrist_yaw_link
+- right_elbow_link
+- right_wrist_roll_link
+- right_wrist_pitch_link
+- right_wrist_yaw_link

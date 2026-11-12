@@ -7,6 +7,7 @@ import torch
 import yaml
 
 from . import ROOT
+from .demos import apply_demo
 
 
 def train_prior(args, device):
@@ -17,18 +18,24 @@ def train_prior(args, device):
     from motion_prior_dataset import MotionPriorData
 
     config = read_yaml("tools/diffusion_model/config/tinymdm_g1.yaml")
+    env_config = read_yaml(config["env_config"])
+    if args.demo:
+        env_config = apply_demo(env_config, args.demo)
+        config["motion_file"] = env_config["motion_file"]
     if args.motion:
         config["motion_file"] = str(args.motion)
+    if not all((ROOT / path).is_file() for path in (env_config["char_file"], config["motion_file"])):
+        raise SystemExit("Missing official G1 assets. Run: python -m mimickit_mujoco fetch-data")
     config["num_iterations"] = args.iterations or (2 if args.smoke else config["num_iterations"])
     if args.smoke:
         config.update(
             batch_size=4, num_samples_stat=16, num_layers=1, num_attention_heads=2, attention_head_dim=16, output_iter=1
         )
-    out = args.out_dir or ROOT / "output/smp_prior_g1"
+    default_name = "smp_prior_g1" + (f"_{args.demo}" if args.demo else "")
+    out = args.out_dir or ROOT / "output" / default_name
     if (out / "model.pt").exists():
         raise SystemExit("Prior output already contains model.pt; choose a new --out-dir")
     out.mkdir(parents=True, exist_ok=True)
-    env_config = read_yaml(config["env_config"])
     # Store the actual data source alongside the prior, including user overrides.
     env_config["motion_file"] = config["motion_file"]
     env_file = out / "env_config.yaml"
@@ -72,6 +79,7 @@ def train_prior(args, device):
                 "iterations": config["num_iterations"],
                 "seed": args.seed,
                 "motion": config["motion_file"],
+                "demo": args.demo,
             },
             indent=2,
         )

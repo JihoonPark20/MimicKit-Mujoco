@@ -8,7 +8,7 @@
 
 ## 지원 알고리즘
 
-| CLI 이름 | 방법 | G1 참조 데이터 |
+| CLI 이름 | 방법 | 기본 G1 참조 데이터 |
 |---|---|---|
 | `deepmimic` | DeepMimic / PPO | 공식 보행 모션 |
 | `awr` | Advantage-Weighted Regression | 공식 보행 모션 |
@@ -30,6 +30,7 @@
 python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e '.[test]'
+python -m mimickit_mujoco fetch-data
 python -m mimickit_mujoco doctor
 ```
 
@@ -38,13 +39,14 @@ python -m mimickit_mujoco doctor
 ```bash
 uv sync --python 3.12 --extra test
 source .venv/bin/activate
+python -m mimickit_mujoco fetch-data
 ```
 
 Linux/NVIDIA에서는 [PyTorch 공식 설치 안내](https://pytorch.org/get-started/locally/)에 따라 CUDA용 PyTorch를 먼저 설치한 다음 `pip install -e .`을 실행하고 `--device cuda:0`을 지정하세요. CUDA는 학습을 가속하며 네이티브 MuJoCo 물리를 GPU로 옮기지는 않습니다. 편의 CLI는 학습 프로세스 하나를 실행합니다. 다중 GPU 실행은 원본 `mimickit/run.py`의 분산 실행 경로를 사용합니다.
 
 ## 공식 G1 모델과 모션
 
-공식 G1 모델·메시와 일곱 샘플 모션을 `data/assets/g1/`, `data/motions/g1/`에 포함했습니다. 원본 라이선스를 보존했으며 파일별 체크섬은 [official_g1_manifest.json](data/official_g1_manifest.json)에 기록했습니다.
+`fetch-data`로 공식 G1 모델·메시와 일곱 샘플 모션을 설치합니다. 내려받은 파일은 `data/assets/g1/`, `data/motions/g1/`에 저장되며 Git에는 포함되지 않습니다. 원본 라이선스를 함께 설치하며 파일별 체크섬은 [official_g1_manifest.json](data/official_g1_manifest.json)에 기록했습니다.
 
 파일이 없으면 [MimicKit 공식 데이터 공유](https://1sfu-my.sharepoint.com/:u:/g/personal/xbpeng_sfu_ca/EclKq9pwdOBAl-17SogfMW0Bved4sodZBQ_5eZCiz9O--w?e=bqXBaa)에서 복원합니다.
 
@@ -68,6 +70,26 @@ python -m mimickit_mujoco view-motion --headless --steps 60
 ```
 
 `--motion data/motions/g1/g1_run.pkl` 또는 MimicKit 데이터셋 YAML로 모션을 선택합니다. 포함된 vault 모션을 장애물과 함께 학습하려면 추가 장면·태스크 구현이 필요합니다.
+
+## 모션 데모
+
+`--demo`로 `spinkick`(회전 발차기), `kick_combo`(연속 발차기), `cartwheel`(옆돌기)을 선택합니다. 세 모션 모두 DeepMimic/PPO, AWR, AMP, ASE, LCP, ADD, SMP용 프리셋을 제공합니다. 옆돌기는 필요한 팔꿈치·손목 접촉 규칙을 포함하며, SMP는 해당 데모로 학습한 prior가 필요합니다.
+
+참조 궤적 미리보기입니다. 학습된 정책이 아닌 모션 재생입니다.
+
+| 회전 발차기 | 연속 발차기 | 옆돌기 |
+|---|---|---|
+| ![회전 발차기](images/g1_demos/spinkick.gif) | ![연속 발차기](images/g1_demos/kick_combo.gif) | ![옆돌기](images/g1_demos/cartwheel.gif) |
+
+```bash
+python -m mimickit_mujoco list-demos
+mjpython -m mimickit_mujoco view-motion --demo spinkick
+python -m mimickit_mujoco train --algorithm amp --demo cartwheel --out-dir output/cartwheel_amp
+```
+
+Linux 뷰어는 `mjpython` 대신 `python`을 사용합니다. 세 모션의 참조 보기, 알고리즘별 학습, SMP prior, 정책 재생 방법은 [데모 안내](docs/G1_DEMOS.ko.md)에 정리했습니다. 사전학습 정책은 포함하지 않으며, 참조 모션 보기와 학습한 정책 재생은 별도 기능입니다.
+
+사용자 데이터셋은 `--motion`으로 선택합니다. [발차기 데이터셋](data/datasets/dataset_g1_kicks.yaml)은 공식 회전·연속 발차기 모션을 같은 가중치로 샘플링합니다. `--demo`와 `--motion`은 동시에 사용할 수 없습니다.
 
 ## 학습
 
@@ -144,4 +166,4 @@ MuJoCo 구현 대상은 **G1의 hinge 관절, 평지, 시각적 참조 캐릭터
 
 ## 출처와 라이선스
 
-MimicKit 소스 기준 커밋은 `fbe1a36e878f036d6bf5521defb8eb3b8ab4170d`입니다. [Apache-2.0 라이선스](LICENSE)와 [인용 정보](CITATION.cff)를 유지합니다. 배치 실행 방식의 기반인 [legged-gym-mujoco](https://github.com/JihoonPark20/legged-gym-mujoco)의 [BSD 고지](licenses/legged-gym-mujoco-BSD-3-Clause.txt)와 제삼자 고지를 보존했습니다. G1 자산의 [Unitree 라이선스](data/assets/g1/LICENSE.txt), 공식 데이터 번들의 [라이선스](data/LICENSE)도 보존했습니다.
+MimicKit 소스 기준 커밋은 `fbe1a36e878f036d6bf5521defb8eb3b8ab4170d`입니다. [Apache-2.0 라이선스](LICENSE)와 [인용 정보](CITATION.cff)를 유지합니다. 배치 실행 방식의 기반인 [legged-gym-mujoco](https://github.com/JihoonPark20/legged-gym-mujoco)의 [BSD 고지](licenses/legged-gym-mujoco-BSD-3-Clause.txt)와 제삼자 고지를 보존했습니다. G1 자산의 [Unitree 라이선스](licenses/unitree-g1-BSD-3-Clause.txt), 공식 데이터 번들의 [라이선스](data/LICENSE)도 보존했습니다.

@@ -8,7 +8,7 @@ Physics runs on the CPU. The PyTorch learner automatically selects **CUDA if ava
 
 ## Supported algorithms
 
-| CLI name | Method | G1 reference data |
+| CLI name | Method | Default G1 reference data |
 |---|---|---|
 | `deepmimic` | DeepMimic / PPO | Official walk clip |
 | `awr` | Advantage-Weighted Regression | Official walk clip |
@@ -30,6 +30,7 @@ Use a **source checkout** and **Python 3.10–3.13**; Python 3.12 is the tested 
 python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e '.[test]'
+python -m mimickit_mujoco fetch-data
 python -m mimickit_mujoco doctor
 ```
 
@@ -38,15 +39,16 @@ Alternatively, reproduce the resolved dependencies with [uv](https://docs.astral
 ```bash
 uv sync --python 3.12 --extra test
 source .venv/bin/activate
+python -m mimickit_mujoco fetch-data
 ```
 
 For Linux/NVIDIA, install the appropriate CUDA-enabled PyTorch build from the [official installer](https://pytorch.org/get-started/locally/) before `pip install -e .`, then select `--device cuda:0`. CUDA accelerates learning, not native MuJoCo physics. Multi-GPU orchestration is available through upstream `mimickit/run.py`; the convenience CLI runs one learner process.
 
 ## Official G1 assets and motions
 
-The official G1 model, meshes, and seven sample motions are present under `data/assets/g1/` and `data/motions/g1/`. Their licenses are retained. File checksums are recorded in [official_g1_manifest.json](data/official_g1_manifest.json).
+Install the official G1 model, meshes and seven sample motions with `fetch-data`. The downloaded files live under `data/assets/g1/` and `data/motions/g1/` and are excluded from Git; their licenses are installed with them. File checksums are recorded in [official_g1_manifest.json](data/official_g1_manifest.json).
 
-To restore missing files from the [official MimicKit data share](https://1sfu-my.sharepoint.com/:u:/g/personal/xbpeng_sfu_ca/EclKq9pwdOBAl-17SogfMW0Bved4sodZBQ_5eZCiz9O--w?e=bqXBaa):
+To install or restore files from the [official MimicKit data share](https://1sfu-my.sharepoint.com/:u:/g/personal/xbpeng_sfu_ca/EclKq9pwdOBAl-17SogfMW0Bved4sodZBQ_5eZCiz9O--w?e=bqXBaa):
 
 ```bash
 python -m mimickit_mujoco fetch-data
@@ -68,6 +70,26 @@ python -m mimickit_mujoco view-motion --headless --steps 60
 ```
 
 Use `--motion data/motions/g1/g1_run.pkl` or a MimicKit dataset YAML to choose another reference. The bundled vault clips require additional scene/task setup and are not evidence of supported obstacle interaction.
+
+## Motion demos
+
+Select `spinkick`, `kick_combo` or `cartwheel` with `--demo`. All three provide presets for DeepMimic/PPO, AWR, AMP, ASE, LCP, ADD and SMP. The cartwheel preset includes the required elbow/wrist contact rules; SMP requires a prior trained on the selected demo.
+
+Reference trajectories (kinematic playback, not trained policies):
+
+| Spinning kick | Kick combination | Cartwheel |
+|---|---|---|
+| ![Spinning kick](images/g1_demos/spinkick.gif) | ![Kick combination](images/g1_demos/kick_combo.gif) | ![Cartwheel](images/g1_demos/cartwheel.gif) |
+
+```bash
+python -m mimickit_mujoco list-demos
+mjpython -m mimickit_mujoco view-motion --demo spinkick
+python -m mimickit_mujoco train --algorithm amp --demo cartwheel --out-dir output/cartwheel_amp
+```
+
+Use `python` instead of `mjpython` for the viewer on Linux. See the [demo guide](docs/G1_DEMOS.md) for all three reference-viewing commands, algorithm-specific training, SMP priors and policy playback. Pretrained policies are not bundled; reference playback and learned-policy playback are separate modes.
+
+For custom datasets, use `--motion`. The [kicks dataset](data/datasets/dataset_g1_kicks.yaml) samples the official spinning-kick and kick-combination clips with equal weights. `--demo` and `--motion` are mutually exclusive.
 
 ## Train
 
@@ -144,4 +166,4 @@ The MuJoCo port targets **G1 hinge joints, flat ground, and visual reference cha
 
 ## Attribution
 
-MimicKit source is pinned to `fbe1a36e878f036d6bf5521defb8eb3b8ab4170d` and retains its [Apache-2.0 license](LICENSE) and [citation](CITATION.cff). The batch runtime approach derives from [legged-gym-mujoco](https://github.com/JihoonPark20/legged-gym-mujoco) framework; its [BSD notice](licenses/legged-gym-mujoco-BSD-3-Clause.txt) and third-party notices are retained. G1 assets retain the [Unitree license](data/assets/g1/LICENSE.txt), and the official data bundle's [license](data/LICENSE) is preserved.
+MimicKit source is pinned to `fbe1a36e878f036d6bf5521defb8eb3b8ab4170d` and retains its [Apache-2.0 license](LICENSE) and [citation](CITATION.cff). The batch runtime approach derives from [legged-gym-mujoco](https://github.com/JihoonPark20/legged-gym-mujoco) framework; its [BSD notice](licenses/legged-gym-mujoco-BSD-3-Clause.txt) and third-party notices are retained. G1 assets retain the [Unitree license](licenses/unitree-g1-BSD-3-Clause.txt), and the official data bundle's [license](data/LICENSE) is preserved.

@@ -1,0 +1,4 @@
+name: kick_combo
+description: Kick combination
+motion_file: data/motions/g1/g1_kick_combo.pkl
+extra_contact_bodies: []
